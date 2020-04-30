@@ -12,3 +12,4 @@ $ pip install selenium
 
 To use this module, import the job_scraper.py file and call the funciton "find_jobs_from()", which takes in several arguments. For an explanation and demonstration of the required arguments, see Demo.ipynb.
 
+(IN PROGRESS)
