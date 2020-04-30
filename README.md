@@ -1,5 +1,5 @@
 # job-scraper
-## Scraping jobs from Indeed or CV jobs
+### Scraping jobs from Indeed or CV jobs
 
 The module job-scraper.py enables you to web scrape job postings from Indeed.co.uk or CWjobs.co.uk.
 
