@@ -17,10 +17,19 @@ import pandas as pd
 import os
 
 
-def find_jobs_from(website, job_title, location, desired_characs):
-    # other to include: date, output_type, listed_since
-    # add in whether Chrome driver or otherwise
-    
+def find_jobs_from(website, job_title, location, desired_characs, filename="results.xls"):    
+    """
+    This function extracts all the desired characteristics of all new job postings
+    of the title and location specified and returns them in single file.
+    The arguments it takes are:
+        - Website: to specify which website to search (options: 'Indeed' or 'CWjobs')
+        - Job_title
+        - Location
+        - Desired_characs: this is a list of the job characteristics of interest,
+            from titles, companies, links and date_listed.
+        - Filename: to specify the filename and format of the output.
+            Default is .xls file called 'results.xls'
+    """
     
     if website == 'Indeed':
         job_soup = load_indeed_jobs_div(job_title, location)
@@ -32,23 +41,24 @@ def find_jobs_from(website, job_title, location, desired_characs):
         job_soup = make_job_search(job_title, location, driver)
         jobs_list, num_listings = extract_job_information_cwjobs(job_soup, desired_characs)
     
-    save_jobs_to_excel(jobs_list)
+    save_jobs_to_excel(jobs_list, filename)
  
-    print('{} new job postings retrieved. Stored in "results.xls".'.format(num_listings))
+    print('{} new job postings retrieved from {}. Stored in {}.'.format(num_listings, 
+                                                                          website, filename))
     
 
 ## ======================= GENERIC FUNCTIONS ======================= ##
 
-def save_jobs_to_excel(jobs_list):
+def save_jobs_to_excel(jobs_list, filename):
     jobs = pd.DataFrame(jobs_list)
-    jobs.to_excel("results.xls") #TODO: allow user to specify this name
+    jobs.to_excel(filename)
 
 
 
 ## ================== FUNCTIONS FOR INDEED.CO.UK =================== ##
 
 def load_indeed_jobs_div(job_title, location):
-    getVars = {'q' : job_title, 'l' : location}
+    getVars = {'q' : job_title, 'l' : location, 'fromage' : 'last', 'sort' : 'date'}
     url = ('https://www.indeed.co.uk/jobs?' + urllib.parse.urlencode(getVars))
     page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
@@ -83,6 +93,13 @@ def extract_job_information_indeed(job_soup, desired_characs):
             links.append(extract_link_indeed(job_elem))
         extracted_info.append(links)
     
+    if 'date_listed' in desired_characs:
+        dates = []
+        cols.append('date_listed')
+        for job_elem in job_elems:
+            dates.append(extract_date_indeed(job_elem))
+        extracted_info.append(dates)
+    
     jobs_list = {}
     
     for j in range(len(cols)):
@@ -105,8 +122,13 @@ def extract_company_indeed(job_elem):
 
 def extract_link_indeed(job_elem):
     link = job_elem.find('a')['href']
-    # TO DO: modify, so that relevant Indeed.co.uk domain is included within the link
+    link = 'www.Indeed.co.uk/' + link
     return link
+
+def extract_date_indeed(job_elem):
+    date_elem = job_elem.find('span', class_='date')
+    date = date_elem.text.strip()
+    return date
 
 
 
@@ -116,12 +138,12 @@ def extract_link_indeed(job_elem):
 def initiate_driver(location_of_driver, browser):
     if browser == 'chrome':
         driver = webdriver.Chrome(executable_path=(location_of_driver + "/chromedriver"))
-#    elif browser == 'firefox':
-#        driver = webdriver.Firefox(executable_path=location_of_driver)
-#    elif browser == 'safari':
-#        driver = webdriver.Safari(executable_path=location_of_driver)
-#    elif browser == '
-#        driver = webdriver.Edge(executable_path=location_of_driver)
+    elif browser == 'firefox':
+        driver = webdriver.Firefox(executable_path=(location_of_driver + "/firefoxdriver"))
+    elif browser == 'safari':
+        driver = webdriver.Safari(executable_path=(location_of_driver + "/safaridriver"))
+    elif browser == 'edge':
+        driver = webdriver.Edge(executable_path=(location_of_driver + "/edgedriver"))
     return driver
 
 def make_job_search(job_title, location, driver):
@@ -174,8 +196,19 @@ def extract_job_information_cwjobs(job_soup, desired_characs):
             companies.append(extract_company_cwjobs(job_elem))
         extracted_info.append(companies)
     
-    # TO DO: links
-    
+    if 'links' in desired_characs:
+        links = []
+        cols.append('links')
+        for job_elem in job_elems:
+            links.append(extract_link_cwjobs(job_elem))
+        extracted_info.append(links)
+                
+    if 'date_listed' in desired_characs:
+        dates = []
+        cols.append('date_listed')
+        for job_elem in job_elems:
+            dates.append(extract_date_cwjobs(job_elem))
+        extracted_info.append(dates)    
     
     jobs_list = {}
     
@@ -191,9 +224,18 @@ def extract_job_title_cwjobs(job_elem):
     title_elem = job_elem.find('h2')
     title = title_elem.text.strip()
     return title
-
  
 def extract_company_cwjobs(job_elem):
     company_elem = job_elem.find('h3')
     company = company_elem.text.strip()
     return company
+
+def extract_link_cwjobs(job_elem):
+    link = job_elem.find('a')['href']
+    return link
+
+def extract_date_cwjobs(job_elem):
+    link_elem = job_elem.find('li', class_='date-posted')
+    link = link_elem.text.strip()
+    return link
+
